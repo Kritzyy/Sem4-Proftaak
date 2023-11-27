@@ -11,8 +11,9 @@ GameObject:
   - component: {fileID: 933205759390525744}
   - component: {fileID: 1146193624397709742}
   - component: {fileID: 5017666115404721810}
-  - component: {fileID: 421481232117072278}
   - component: {fileID: 6378710601933134851}
+  - component: {fileID: 421481232117072278}
+  - component: {fileID: 2076878719806503094}
   m_Layer: 0
   m_Name: ClayPigeon
   m_TagString: Untagged
@@ -76,7 +77,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: bd3b0b6c6d7131b4fa49809f7c68f2f1, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 045a422c5438a234cac4cfb8d99a06ba, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -108,21 +109,6 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 1
   m_Constraints: 0
---- !u!114 &421481232117072278
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8082871603240972131}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 604f726e877527842af8087113ad295c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  OnMiss:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!70 &6378710601933134851
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
@@ -139,3 +125,41 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 1, y: 0.75}
   m_Direction: 1
+--- !u!114 &421481232117072278
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8082871603240972131}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 604f726e877527842af8087113ad295c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Animator: {fileID: 2076878719806503094}
+  DestroyAnimLength: 0.25
+  OnMiss:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!95 &2076878719806503094
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8082871603240972131}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: c20826fc79b52614eaeab3fd9d136a5b, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

@@ -13,6 +13,7 @@ public abstract class Game : MonoBehaviour
     protected TextMeshProUGUI Header;
     public Coroutine RunningGame;
     protected List<GameObject> AllObjects = new List<GameObject>();
+    public abstract bool Started { get; protected set; }
 
     public void StartGame()
     {
@@ -32,6 +33,7 @@ public abstract class Game : MonoBehaviour
         OnGameExit();
         StopCoroutine(RunningGame);
         gameObject.SetActive(false);
+        Started = false;
     }
     protected abstract void OnGameStart();
     protected abstract IEnumerator ProcessGame();

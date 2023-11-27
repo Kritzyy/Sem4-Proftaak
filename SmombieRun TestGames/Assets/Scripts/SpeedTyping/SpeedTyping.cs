@@ -12,7 +12,7 @@ public class SpeedTyping : Game
     [Header("SpeedTyping specific")]
     public TextMeshProUGUI MessageText;
     public GameObject SentMessageBoxPrefab, ReceivedMessageBoxPrefab;
-    public Transform Content;
+    public Transform Content, Queue;
     public RectTransform ActiveWindow;
     public Button SendButton, TextButton;
     public float TimePerMessage;
@@ -26,7 +26,7 @@ public class SpeedTyping : Game
     private string RequestedMessage = "";
     private int CurrentChar = 0;
 
-    private const string StandardMessage = "<i><color=#939393>Typ hier...</color></i>";
+    private const string StandardMessage = "<i><color=#939393>Type here...</color></i>";
 
     private Dictionary<string, string> MessageLibrary = new Dictionary<string, string>()
     {
@@ -38,30 +38,36 @@ public class SpeedTyping : Game
 
     private Coroutine NewMessageCoroutine;
 
-    private void Start()
-    {
-        
-    }
+    [Header("Editor specific")]
+    public TMP_InputField EditorInputField;
+    public bool InputFieldOpen;
+
+    public override bool Started { get; protected set; }
 
     protected override void OnGameStart()
     {
+        ActiveWindow.sizeDelta = new Vector2(873f, Screen.height);
         RunningGame = StartCoroutine(ProcessGame());
     }
 
     protected override IEnumerator ProcessGame()
     {
+        SendButton.interactable = false;
         Header.gameObject.SetActive(true);
         yield return new WaitForSecondsRealtime(1f);
         Header.gameObject.SetActive(false);
-
+        Started = true;
 
         AddMessageToQueue(); // Start with one
         int KnownQueueLength = 1; // Will always start at one
         NewMessageCoroutine = StartCoroutine(AddNewMessages());
         while (true)
         {
-            // Set active message to most recent
+            // Set active message to most recent, move to the content page
             ActiveMessage = AllMessages[KnownQueueLength - 1];
+            ActiveMessage.MessageObject.transform.SetParent(Content, true);
+            RequestedMessage = ActiveMessage.Answer;
+            ToggleCurrentMessageButton(true);
 
             // Wait until replied
             while (!ActiveMessage.Replied)
@@ -70,10 +76,11 @@ public class SpeedTyping : Game
             }
 
             // Replied to message, check its content
-            if (FullMessage != ActiveMessage.Answer) // Wrong answer, strike
+            if (FullMessage != RequestedMessage) // Wrong answer, strike
             {
                 OnStrike();
             }
+            ClearMessageBox();
 
             while (KnownQueueLength == QueueLength)
             {
@@ -81,13 +88,26 @@ public class SpeedTyping : Game
                 yield return new WaitForEndOfFrame();
             }
             // On to the next
-            yield return new WaitForEndOfFrame();
+            KnownQueueLength = QueueLength;
+            yield return new WaitForSeconds(0.5f);
         }
+    }
+
+    private void ToggleCurrentMessageButton(bool Enable)
+    {
+        SendButton.interactable = Enable;
+        TextButton.interactable = Enable;
     }
 
     private void Send()
     {
         ActiveMessage.Replied = true;
+        ToggleCurrentMessageButton(false);
+
+        // Add response
+        GameObject NewResponse = Instantiate(SentMessageBoxPrefab, Content);
+        NewResponse.GetComponentInChildren<TextMeshProUGUI>().text = FullMessage;
+        AllObjects.Add(NewResponse);
     }
 
     private IEnumerator AddNewMessages()
@@ -103,15 +123,16 @@ public class SpeedTyping : Game
                 currentTimeBetweenMessages += Time.deltaTime;
                 yield return new WaitForEndOfFrame();
             }
+            
+            // Reached, add new message
+            AddMessageToQueue();
+            Debug.Log("New question");
+            yield return new WaitForEndOfFrame();
 
             if (QueueLength == MaxMessages)
             {
                 break;
             }
-            // Reached, add new message
-            AddMessageToQueue();
-            Debug.Log("New question");
-            yield return new WaitForEndOfFrame();
         }
 
         Debug.Log("All questions asked");
@@ -120,19 +141,33 @@ public class SpeedTyping : Game
     private void AddMessageToQueue()
     {
         KeyValuePair<string, string> NewEntry = MessageLibrary.ElementAt(Random.Range(0 ,MessageLibrary.Count));
-        TextMessage NewTextMessage = Instantiate(ReceivedMessageBoxPrefab, Content).AddComponent<TextMessage>();
+        GameObject NewObject = Instantiate(ReceivedMessageBoxPrefab, Queue);
+        TextMessage NewTextMessage = NewObject.AddComponent<TextMessage>();
+        NewTextMessage.MessageObject = NewObject;
         NewTextMessage.Init(NewEntry.Key, NewEntry.Value);
         AllMessages.Add(NewTextMessage);
+        AllObjects.Add(NewObject);
+        QueueLength++;
     }
 
     protected override void OnGameExit()
     {
         if (NewMessageCoroutine != null) StopCoroutine(NewMessageCoroutine);
+        ClearMessageBox();
+        AllMessages.Clear();
+        QueueLength = 0;
+    }
+
+    private void ClearMessageBox()
+    {
+        FullMessage = "";
+        UpdateMessageBox();
     }
 
     private void UpdateMessageBox()
     {
         MessageText.text = FullMessage;
+        CurrentChar = FullMessage.Count();
         if (CurrentChar == 0)
         {
             MessageText.text = StandardMessage;
@@ -141,11 +176,43 @@ public class SpeedTyping : Game
 
     public void OpenKeyboard()
     {
-        StartCoroutine(CheckKeyboard());
+        if (Application.isEditor && Application.isPlaying)
+        {
+            StartCoroutine(CheckKeyboardEditor());
+        }
+        else
+        {
+            StartCoroutine(CheckKeyboardBuild());
+        }
     }
 
-    private IEnumerator CheckKeyboard()
+    private IEnumerator CheckKeyboardEditor()
     {
+        InputFieldOpen = true;
+        EditorInputField.gameObject.SetActive(true);
+        SendButton.interactable = false;
+        while (InputFieldOpen)
+        {
+            FullMessage = EditorInputField.text;
+            yield return new WaitForEndOfFrame();
+        }
+
+        yield return new WaitForSecondsRealtime(0.1f);
+        Debug.Log(FullMessage);
+        UpdateMessageBox();
+        ActiveWindow.sizeDelta = new Vector2(873f, Screen.height);
+        SendButton.interactable = true;
+    }
+
+    public void CloseInputField()
+    {
+        InputFieldOpen = false;
+        EditorInputField.gameObject.SetActive(false);
+    }
+
+    private IEnumerator CheckKeyboardBuild()
+    {
+        SendButton.interactable = false;
         TouchScreenKeyboard keyboard = TouchScreenKeyboard.Open("", TouchScreenKeyboardType.Default);
         while (keyboard.active)
         {
@@ -154,10 +221,12 @@ public class SpeedTyping : Game
             ActiveWindow.sizeDelta = new Vector2(873f, Screen.height - Height);
             yield return new WaitForEndOfFrame();
         }
-        CurrentChar = FullMessage.Count();
+
+        yield return new WaitForSecondsRealtime(0.1f);
         Debug.Log(FullMessage);
         UpdateMessageBox();
         ActiveWindow.sizeDelta = new Vector2(873f, Screen.height);
+        SendButton.interactable = true;
     }
 
     private int ReturnKeyboardHeight()

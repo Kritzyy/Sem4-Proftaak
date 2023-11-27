@@ -6,6 +6,10 @@ using UnityEngine.Events;
 public class ClayPigeon : MonoBehaviour
 {
     private const float MaxAnglePos = 90f, MaxAngleNeg = -250;
+    public Animator Animator;
+    public float DestroyAnimLength;
+    public bool Hit;
+
     public UnityEvent OnMiss;
     // Use this for initialization
     private void Start()
@@ -50,5 +54,14 @@ public class ClayPigeon : MonoBehaviour
         float xcomponent = Mathf.Cos(Angle * Mathf.PI / 180);
         float ycomponent = Mathf.Sin(Angle * Mathf.PI / 180);
         return new Vector3(xcomponent, ycomponent, 0);
+    }
+
+    public IEnumerator Destroy()
+    {
+        Hit = true;
+        Animator.SetFloat("AnimSpeed", 1 / DestroyAnimLength);
+        Animator.Play("Destroy");
+        yield return new WaitForSeconds(DestroyAnimLength);
+        Destroy(gameObject);
     }
 }

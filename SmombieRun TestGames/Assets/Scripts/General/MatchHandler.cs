@@ -56,10 +56,17 @@ public class MatchHandler : MonoBehaviour
     {
         while (MatchStarted)
         {
+            // Reset to start
             Animator.ResetTrigger("NewGame");
             CurrentGame = AllGames[Random.Range(0, AllGames.Count)];
             CurrentGame.StartGame();
             timer = TimePerMicrogame;
+
+            // Wait until game start
+            while (!CurrentGame.Started)
+            {
+                yield return new WaitForEndOfFrame();
+            }
             while (timer > 0)
             {
                 timer -= Time.deltaTime;

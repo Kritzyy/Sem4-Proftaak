@@ -10,10 +10,16 @@ using Random = UnityEngine.Random;
 public class Clayshooting : Game
 {
     [Header("Clayshooting specific")]
-    public GameObject TestReticle;
+    public GameObject Reticle;
     public GameObject ClayModel;
     public Transform BorderObject;
     private InputAction Shoot, Touch;
+    public Animator Animator;
+
+    public override bool Started { get; protected set; }
+
+    public float MaxReticleUptime;
+    private float ReticleUptime;
 
     protected override void OnGameStart()
     {
@@ -24,30 +30,15 @@ public class Clayshooting : Game
         RunningGame = StartCoroutine(ProcessGame());
     }
 
-    private void Touch_performed(InputAction.CallbackContext obj)
-    {
-        var Tapping = obj.ReadValue<float>();
-        if (Tapping == 1)
-        {
-            var TapLocation = Shoot.ReadValue<Vector2>();
-
-            Vector3 ShotLocation = Camera.main.ScreenToWorldPoint(TapLocation);
-            ShotLocation.z = -1;
-            TestReticle.transform.position = ShotLocation;
-            Collider2D HitObject = Physics2D.OverlapPoint(ShotLocation);
-            if (HitObject != null)
-            {
-                Debug.LogFormat("Hit {0}", HitObject.name);
-                Destroy(HitObject.gameObject);
-            }
-        }
-    }
-
     protected override IEnumerator ProcessGame()
     {
         Header.gameObject.SetActive(true);
         yield return new WaitForSecondsRealtime(1f);
         Header.gameObject.SetActive(false);
+        Started = true;
+
+        StartCoroutine(DespawnReticle());
+
         (float, float) MinMaxTimePerClay = (0.75f, 2.25f);
         float TimeAfterLastClay = 0;
         float NewSpawnTime = 0;
@@ -61,6 +52,48 @@ public class Clayshooting : Game
             {
                 TimeAfterLastClay += Time.deltaTime;
                 yield return new WaitForEndOfFrame();
+            }
+            yield return new WaitForEndOfFrame();
+        }
+    }
+
+    private void Touch_performed(InputAction.CallbackContext obj)
+    {
+        ReticleUptime = MaxReticleUptime;
+        var Tapping = obj.ReadValue<float>();
+        if (Tapping == 1)
+        {
+            Reticle.SetActive(true);
+            Animator.Play("Shoot");
+
+            var TapLocation = Shoot.ReadValue<Vector2>();
+
+            Vector3 ShotLocation = Camera.main.ScreenToWorldPoint(TapLocation);
+            ShotLocation.z = -1;
+            Reticle.transform.position = ShotLocation;
+            Collider2D ObjectHit = Physics2D.OverlapPoint(ShotLocation);
+            if (ObjectHit != null)
+            {
+                bool IsClayPigeon = ObjectHit.TryGetComponent(out ClayPigeon HitObject);
+                if (IsClayPigeon && !HitObject.Hit)
+                {
+                    Debug.LogFormat("Hit {0}", HitObject.name);
+                    StartCoroutine(HitObject.Destroy());
+                }
+            }
+        }
+    }
+
+    private IEnumerator DespawnReticle()
+    {
+        ReticleUptime = 0;
+        while (true)
+        {
+            ReticleUptime -= Time.deltaTime;
+            if (ReticleUptime <= 0)
+            {
+                ReticleUptime = 0;
+                Reticle.SetActive(false);
             }
             yield return new WaitForEndOfFrame();
         }

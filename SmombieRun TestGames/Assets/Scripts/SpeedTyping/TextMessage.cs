@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class TextMessage : MonoBehaviour
 {
+    public GameObject MessageObject;
     public string Text;
     public string Answer;
     public TextMeshProUGUI MessageTextMesh;
