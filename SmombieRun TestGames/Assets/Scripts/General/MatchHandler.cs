@@ -42,7 +42,7 @@ public class MatchHandler : MonoBehaviour
     // Start is called before the first frame update
     private void Start()
     {
-        TimerText.text = timer.ToString("00.00");
+        TimerText.text = timer.ToString("00");
     }
     public void StartMatch()
     {
@@ -63,10 +63,10 @@ public class MatchHandler : MonoBehaviour
             while (timer > 0)
             {
                 timer -= Time.deltaTime;
-                TimerText.text = timer.ToString("00.00");
+                TimerText.text = timer.ToString("00");
                 yield return new WaitForEndOfFrame();
             }
-            TimerText.text = "00.00";
+            TimerText.text = "00";
             CurrentGame.ExitGame();
             Animator.SetTrigger("NewGame");
             yield return new WaitForSecondsRealtime(AnimationLength);
@@ -100,7 +100,7 @@ public class MatchHandler : MonoBehaviour
     public void GameOver()
     {
         StopCoroutine(Match);
-        TimerText.text = "XX:XX";
+        TimerText.text = "XX";
         CurrentGame.ExitGame();
         GameInputs.DeactivateInput();
         GameOverScreen.gameObject.SetActive(true);

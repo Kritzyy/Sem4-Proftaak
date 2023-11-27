@@ -41,7 +41,7 @@ public class ClayPigeon : MonoBehaviour
                 }
         }
         Vector3 AngleForce = GetVectorFromAngle(Angle);
-        float Power = Random.Range(30, 60);
+        float Power = Random.Range(30, 45);
         ClayRigid.AddForce(Power * AngleForce, ForceMode2D.Impulse);
     }
 

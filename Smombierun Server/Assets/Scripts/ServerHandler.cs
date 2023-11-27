@@ -35,7 +35,7 @@ public class ServerHandler : MonoBehaviour
 
     private void Start()
     {
-        IP = IP.Any;
+        IP = IP.Parse("192.168.0.101");
         Port = 8888;
         Server = new TcpListener(IP, Port);
     }

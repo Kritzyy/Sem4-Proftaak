@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine.UI;
 using Enums.SpeedTypingEnums;
 using UnityEngine.InputSystem;
+using System.Linq;
 
 public class SpeedTyping : Game
 {
@@ -13,17 +14,29 @@ public class SpeedTyping : Game
     public GameObject SentMessageBoxPrefab, ReceivedMessageBoxPrefab;
     public Transform Content;
     public RectTransform ActiveWindow;
-    public Sprite WrongTexture;
     public Button SendButton, TextButton;
-    private bool Replied;
+    public float TimePerMessage;
+    public int MaxMessages;
+
+    private List<TextMessage> AllMessages = new List<TextMessage>();
+    private TextMessage ActiveMessage;
+    private int QueueLength;
 
     private string FullMessage = "";
     private string RequestedMessage = "";
+    private int CurrentChar = 0;
 
-    private List<string> MessageLibrary = new List<string>()
+    private const string StandardMessage = "<i><color=#939393>Typ hier...</color></i>";
+
+    private Dictionary<string, string> MessageLibrary = new Dictionary<string, string>()
     {
-        "Lorem Ipsum Dolor Sit Amet"
+        {"Answer this with \"OK!\"", "OK!"},
+        {"Answer this with \"ok\"", "ok"},
+        {"Answer this with \"Yup\"", "Yup"},
+        {"Answer this with \"Good\"", "Good"},
     };
+
+    private Coroutine NewMessageCoroutine;
 
     private void Start()
     {
@@ -40,97 +53,89 @@ public class SpeedTyping : Game
         Header.gameObject.SetActive(true);
         yield return new WaitForSecondsRealtime(1f);
         Header.gameObject.SetActive(false);
+
+
+        AddMessageToQueue(); // Start with one
+        int KnownQueueLength = 1; // Will always start at one
+        NewMessageCoroutine = StartCoroutine(AddNewMessages());
         while (true)
         {
-            _ = OnNewMessage(MessageType.RECEIVED);
-            SendButton.interactable = true;
-            TextButton.interactable = true;
-            Replied = false;
-            while (!Replied)
+            // Set active message to most recent
+            ActiveMessage = AllMessages[KnownQueueLength - 1];
+
+            // Wait until replied
+            while (!ActiveMessage.Replied)
             {
                 yield return new WaitForEndOfFrame();
             }
-            SendButton.interactable = false;
-            TextButton.interactable = false;
-            yield return new WaitForSeconds(1);
+
+            // Replied to message, check its content
+            if (FullMessage != ActiveMessage.Answer) // Wrong answer, strike
+            {
+                OnStrike();
+            }
+
+            while (KnownQueueLength == QueueLength)
+            {
+                // Wait for next message available
+                yield return new WaitForEndOfFrame();
+            }
+            // On to the next
+            yield return new WaitForEndOfFrame();
         }
+    }
+
+    private void Send()
+    {
+        ActiveMessage.Replied = true;
+    }
+
+    private IEnumerator AddNewMessages()
+    {
+        while (true)
+        {
+            // Reset the timer for each message
+            float currentTimeBetweenMessages = 0;
+
+            // Wait until next message to queue
+            while (currentTimeBetweenMessages < TimePerMessage)
+            {
+                currentTimeBetweenMessages += Time.deltaTime;
+                yield return new WaitForEndOfFrame();
+            }
+
+            if (QueueLength == MaxMessages)
+            {
+                break;
+            }
+            // Reached, add new message
+            AddMessageToQueue();
+            Debug.Log("New question");
+            yield return new WaitForEndOfFrame();
+        }
+
+        Debug.Log("All questions asked");
+    }
+
+    private void AddMessageToQueue()
+    {
+        KeyValuePair<string, string> NewEntry = MessageLibrary.ElementAt(Random.Range(0 ,MessageLibrary.Count));
+        TextMessage NewTextMessage = Instantiate(ReceivedMessageBoxPrefab, Content).AddComponent<TextMessage>();
+        NewTextMessage.Init(NewEntry.Key, NewEntry.Value);
+        AllMessages.Add(NewTextMessage);
     }
 
     protected override void OnGameExit()
     {
-
-    }
-
-    private GameObject OnNewMessage(MessageType messageType)
-    {
-        string NewMessage = "";
-        GameObject NewMessageObject = null;
-
-        switch (messageType)
-        {
-            case MessageType.RECEIVED:
-                {
-                    RequestedMessage = MessageLibrary[Random.Range(0, MessageLibrary.Count)];
-                    NewMessage = RequestedMessage;
-                    NewMessageObject = Instantiate(ReceivedMessageBoxPrefab, Content);
-                    break;
-                }
-            case MessageType.SENT:
-                {
-                    NewMessage = FullMessage != string.Empty ? FullMessage : " ";
-                    NewMessageObject = Instantiate(SentMessageBoxPrefab, Content);
-                    break;
-                }
-        }
-        
-        TextMeshProUGUI MessageText = NewMessageObject.GetComponentInChildren<TextMeshProUGUI>();
-        MessageText.text = NewMessage;
-        AllObjects.Add(NewMessageObject);
-        return NewMessageObject;
-    }
-
-    public void AddLetter(string Letter)
-    {
-        FullMessage += FullMessage == string.Empty ? Letter.ToUpper() : Letter.ToLower();
-        UpdateMessageBox();
-    }
-
-    public void Backspace()
-    {
-        if (FullMessage.Length > 0)
-        {
-            FullMessage = FullMessage.Remove(FullMessage.Length - 1);
-            UpdateMessageBox();
-        }
-    }
-
-    public void Send()
-    {
-        Replied = true;
-        GameObject Message = OnNewMessage(MessageType.SENT);
-
-        // Todo: check if answer was correct
-        if (FullMessage != RequestedMessage)
-        {
-            Message.GetComponent<Image>().sprite = WrongTexture;
-            OnStrike();
-        }
-
-        ClearMessage();
-    }
-
-    private void ClearMessage()
-    {
-        FullMessage = "";
-        UpdateMessageBox();
+        if (NewMessageCoroutine != null) StopCoroutine(NewMessageCoroutine);
     }
 
     private void UpdateMessageBox()
     {
         MessageText.text = FullMessage;
-        if (FullMessage == string.Empty)
+        if (CurrentChar == 0)
         {
-            MessageText.text = " ";
+            MessageText.text = StandardMessage;
         }
     }
 
@@ -149,6 +154,7 @@ public class SpeedTyping : Game
             ActiveWindow.sizeDelta = new Vector2(873f, Screen.height - Height);
             yield return new WaitForEndOfFrame();
         }
+        CurrentChar = FullMessage.Count();
         Debug.Log(FullMessage);
         UpdateMessageBox();
         ActiveWindow.sizeDelta = new Vector2(873f, Screen.height);
