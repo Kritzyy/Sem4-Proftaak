@@ -26,6 +26,15 @@ public class ServerMenuHandler : MenuHandler
     [SerializeField]
     private ServerType ServerType;
 
+    /// <summary>
+    /// DO NOT MODIFY THIS. This is suppressing <see cref="MenuHandler.Connect"/> for the server. Do not call
+    /// </summary>
+    public new void Connect()
+    {
+        Debug.LogError("You're not the client!");
+        return;
+    }
+
     void Start()
     {
         UI.SetStatusText("NO GAME");
@@ -35,12 +44,10 @@ public class ServerMenuHandler : MenuHandler
         SceneManager.LoadScene("ObjectsScene", LoadSceneMode.Additive);
     }
 
-    public new void Connect()
-    {
-        Debug.LogError("You're not the client!");
-        return;
-    }
-
+    #region Import Excel
+    /// <summary>
+    /// Used by the ImportButton to call <see cref="ExcelReader.GetListFromExcel(string)"/> and save the list in <see cref="RegisteredPlayers"/>
+    /// </summary>
     public void ImportStartList()
     {
         try
@@ -55,7 +62,9 @@ public class ServerMenuHandler : MenuHandler
             UI.ToggleButton(ButtonType.IMPORT, true, default);
         }
     }
+    #endregion
 
+    #region Server creation
     public void OpenHost()
     {
         this.AsHost().CreateLobby();
@@ -133,7 +142,9 @@ public class ServerMenuHandler : MenuHandler
             }
         }
     }
+    #endregion
 
+    #region Server settings
     public void StartAtTime()
     {
         if (!SetTime())
@@ -165,65 +176,9 @@ public class ServerMenuHandler : MenuHandler
         if (!IP.Contains("192.168."))
         {
             Debug.LogError("Game is not hosted on a private network! Cannot create code!");
+            throw new Exception("IP address is invalid.");
         }
         return IP.Replace("192.168.", "");
-    }
-
-    private void NewClientApproval(NetworkManager.ConnectionApprovalRequest Request, NetworkManager.ConnectionApprovalResponse Response)
-    {
-        ulong ID = Request.ClientNetworkId;
-        var T = Request.Payload;
-        string Message = Encoding.ASCII.GetString(T);
-        Response.CreatePlayerObject = true;
-        
-        if (Message.Length != 4 || !IsDigitsOnly(Message))
-        {
-            Debug.LogWarningFormat("A request for number {0} was denied because it did not meet standards", Message);
-            Response.Reason = "StartCodeFormatError";
-            Response.Approved = false;
-            Response.Pending = false;
-            return;
-        }
-        else if (IsNameRegistered(Message, out PlayerEntry Entry))
-        {
-            Debug.LogWarningFormat("A request for ID {0} was approved", Entry.Name);
-            UI.AddToEntryList(ID, Entry.Name, Message);
-            Response.Approved = true;
-            Response.Pending = false;
-        }
-        else
-        {
-            Debug.LogWarningFormat("A request for number {0} was denied because it wasn't found in the list", Message);
-            Response.Reason = "StartCodeNotRecognized";
-            Response.Approved = false;
-            Response.Pending = false;
-            return;
-        }
-    }
-
-    bool IsDigitsOnly(string str)
-    {
-        foreach (char c in str)
-        {
-            if (c < '0' || c > '9')
-                return false;
-        }
-
-        return true;
-    }
-
-    private bool IsNameRegistered(string StartNumber, out PlayerEntry Entry)
-    {
-        foreach (PlayerEntry entry in RegisteredPlayers)
-        {
-            if (entry.StartNumber == StartNumber)
-            {
-                Entry = entry;
-                return true;
-            }
-        }
-        Entry = null;
-        return false;
     }
 
     public bool CheckTimeText(string In, out TimeClass startTime)
@@ -256,13 +211,85 @@ public class ServerMenuHandler : MenuHandler
         }
         throw new System.Exception("No network adapters with an IPv4 address in the system!");
     }
+    #endregion
 
-    //[ServerRpc]
-    //public void UpdateStrikes_ServerRpc(ulong ID, int Strikes)
-    //{
+    #region Handle connections
+    private void NewClientApproval(NetworkManager.ConnectionApprovalRequest Request, NetworkManager.ConnectionApprovalResponse Response)
+    {
+        ulong ID = Request.ClientNetworkId;
+        var T = Request.Payload;
+        string StartNumber = Encoding.ASCII.GetString(T);
+        Response.CreatePlayerObject = true;
+        
+        if (StartNumber.Length != 4 || !IsDigitsOnly(StartNumber))
+        {
+            Debug.LogWarningFormat("A request for number {0} was denied because it did not meet standards", StartNumber);
+            Response.Reason = "StartCodeFormatError";
+            Response.Approved = false;
+            Response.Pending = false;
+            return;
+        }
+        else if (IsNameRegistered(StartNumber, out PlayerEntry Entry))
+        {
+            Debug.LogWarningFormat("A request for ID {0} was approved", Entry.Name);
+            Entry.MenuEntry.gameObject.SetActive(true);
+            if (Entry.Joined && TestServerStuff.MatchStarted)
+            {
+                JoinLate(Entry);
+            }
+            UI.AssignEntry(Entry, ID);
+            Response.Approved = true;
+            Response.Pending = false;
+        }
+        else
+        {
+            Debug.LogWarningFormat("A request for number {0} was denied because it wasn't found in the list", StartNumber);
+            Response.Reason = "StartCodeNotRecognized";
+            Response.Approved = false;
+            Response.Pending = false;
+            return;
+        }
+    }
 
-    //}
+    bool IsDigitsOnly(string str)
+    {
+        foreach (char c in str)
+        {
+            if (c < '0' || c > '9')
+                return false;
+        }
 
+        return true;
+    }
+
+    private bool IsNameRegistered(string StartNumber, out PlayerEntry Entry)
+    {
+        foreach (PlayerEntry entry in RegisteredPlayers)
+        {
+            if (entry.StartNumber == StartNumber)
+            {
+                Entry = entry;
+                return true;
+            }
+        }
+        Entry = null;
+        return false;
+    }
+
+    public void JoinLate(PlayerEntry Entry, ServerRpcParams rpcParams = default)
+    {
+        foreach (PlayerEntry ListEntry in RegisteredPlayers)
+        {
+            if (Entry == ListEntry)
+            {
+                Entry.MenuEntry.SetText(Entry.Name + " {!}", Entry.StartNumber);
+                return;
+            }
+        }
+    }
+    #endregion
+
+    #region Server triggers
     private void Server_ClientConnect(ulong ID)
     {
         Debug.LogFormat("Device with ID {0} connected", ID);
@@ -270,7 +297,7 @@ public class ServerMenuHandler : MenuHandler
     private void Server_ClientDisconnect(ulong ID)
     {
         Debug.LogFormat("Device with ID {0} disconnected", ID);
-        UI.RemoveFromEntryList(ID);
+        UI.SetToDisconnected(ID);
     }
-
+    #endregion
 }

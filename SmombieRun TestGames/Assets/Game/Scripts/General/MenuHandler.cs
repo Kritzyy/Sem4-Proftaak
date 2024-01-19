@@ -33,21 +33,24 @@ public class MenuHandler : MonoBehaviour
 
     private void Start()
     {
-        Action T = () =>
+        // If connection timed out, play this
+        Action ErrorEvent = () =>
         {
             Debug.LogError("Could not connect to server because it could not be found on this network");
             Error.SetText("Could not establish connection to server. Make sure you are connected to the same network.").ShowError();
             ConnectButton.interactable = true;
             DemoButton.interactable = true;
         };
-        ConnectAction = new ActionDelay(T);
+        ConnectAction = new ActionDelay(ErrorEvent);
 
+        // Get objects from Object Scene
         if (FindAnyObjectByType(typeof(EventSystem)) == null)
         {
             Debug.Log("No Objects found yet, loading objects.");
             SceneManager.LoadScene("ObjectsScene", LoadSceneMode.Additive);
         }
 
+        // Delay get Network Manager for disconnect reason
         Action NetworkManagerAction = () =>
         {
             m_NetworkManager = GameObject.FindGameObjectWithTag("NetworkManager").GetComponent<NetworkManager>();
@@ -89,9 +92,12 @@ public class MenuHandler : MonoBehaviour
         StartCoroutine(ConnectAction.WaitThenDoAction(WaitTime));
     }
 
-    /* Sets the Ip Address of the Connection Data in Unity Transport
-	to the Ip Address which was input in the Input Field */
-    // ONLY FOR CLIENT SIDE
+    /// <summary>
+    /// Set the IP address that will be used to connect to the server
+    /// </summary>
+    /// <param name="Code">The room code</param>
+    /// <param name="IsServer">The parameter used to distinguish <see cref="MenuHandler"/> from <see cref="ServerMenuHandler"/></param>
+    /// <returns><see langword="true"/> if the room code is valid, otherwise <see langword="false"/></returns>
     public bool SetIpAddress(string Code, bool IsServer)
     {
         if (!IsServer)
@@ -115,6 +121,9 @@ public class MenuHandler : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// If connection is successfull, cancel the timeout delay.
+    /// </summary>
     public void CancelConnectTimeout()
     {
         ConnectAction.Cancel();
@@ -125,7 +134,11 @@ public class MenuHandler : MonoBehaviour
         SceneManager.LoadScene("DemoScene");
     }
 
-    private void OnClientDisconnectCallback(ulong obj)
+    /// <summary>
+    /// Error handling if the connection was unsuccessfull
+    /// </summary>
+    /// <param name="ID">The ID of the player</param>
+    private void OnClientDisconnectCallback(ulong ID)
     {
         Debug.Log("Disconnect");
         ConnectAction.Cancel();

@@ -56,7 +56,7 @@ public class MatchHandler : NetworkBehaviour
     public Canvas WaitingLobby;
 
     [Header("Server")]
-    public TestServerStuff Server;
+    public TestServerStuff Network;
 
     // Misc
     private Coroutine Game;
@@ -68,19 +68,15 @@ public class MatchHandler : NetworkBehaviour
         {
             if (serverObject.IsOwner)
             {
-                Server = FindFirstObjectByType<TestServerStuff>();
+                Network = FindFirstObjectByType<TestServerStuff>();
                 break;
             }
         }
 
-        StartCoroutine(Match == MatchType.MATCH ? WaitingRoom() : DemoRoom());
+        if (Match == MatchType.MATCH) StartCoroutine(WaitingRoom());
     }
 
-    private IEnumerator DemoRoom()
-    {
-        yield return null;
-    }
-
+    #region Demo scene
     public void StartDemoGame(Game game)
     {
         // Start game
@@ -99,7 +95,9 @@ public class MatchHandler : NetworkBehaviour
     {
         SceneManager.LoadScene("MenuScene");
     }
+    #endregion
 
+    #region Waiting room
     private IEnumerator WaitingRoom()
     {
         // Countdown
@@ -143,7 +141,9 @@ public class MatchHandler : NetworkBehaviour
         Animator.SetFloat("AnimSpeed", AnimMultiplier);
         Game = StartCoroutine(HandleGame());
     }
+    #endregion
 
+    #region Gameplay
     private IEnumerator HandleGame()
     {
         Animator.SetTrigger("NewGame");
@@ -200,7 +200,7 @@ public class MatchHandler : NetworkBehaviour
                         break;
                     }
             }
-            Server.UpdateStrikes_ServerRpc(StrikeCount);
+            Network.UpdateStrikes_ServerRpc(StrikeCount);
         }
         else
         {
@@ -217,4 +217,5 @@ public class MatchHandler : NetworkBehaviour
         GameInputs.DeactivateInput();
         GameOverScreen.gameObject.SetActive(true);
     }
+    #endregion
 }

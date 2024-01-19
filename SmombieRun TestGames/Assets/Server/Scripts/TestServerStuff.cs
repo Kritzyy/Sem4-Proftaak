@@ -5,10 +5,12 @@ using UnityEngine.SceneManagement;
 using StartTime;
 using System;
 using Enums.UI;
+using ExcelReader_NS;
 
 public class TestServerStuff : NetworkBehaviour
 {
     public UIElements UI;
+    public ServerMenuHandler Server;
 
     public static NetworkVariable<TimeClass> StartTime = new NetworkVariable<TimeClass>(new TimeClass(-1,-1,-1,false));
     public static bool MatchStarted;
@@ -17,6 +19,7 @@ public class TestServerStuff : NetworkBehaviour
 
     private MenuHandler Menu;
 
+    #region On connection
     public override void OnNetworkSpawn()
     {
         DontDestroyOnLoad(gameObject);
@@ -72,30 +75,36 @@ public class TestServerStuff : NetworkBehaviour
         UI.SetHostFooter("The game has started now. Start time and player list cannot be changed, and no one can join anymore.");
         SendStartSignal_ClientRpc();
     }
+    #endregion
 
+    #region RPCs
     [ServerRpc(RequireOwnership = false)]
     public void UpdateStrikes_ServerRpc(int Strikes, ServerRpcParams rpcParams = default)
     {
         Debug.Log($"ID {rpcParams.Receive.SenderClientId} has {Strikes} strikes now.");
         UI = GameObject.FindWithTag("UI").GetComponent<UIElements>();
+        Server = GameObject.Find("ServerHandler").GetComponent<ServerMenuHandler>();
         SetStrikeFromID(rpcParams.Receive.SenderClientId, Strikes);
     }
 
+    [ClientRpc]
+    public void SendStartSignal_ClientRpc()
+    {
+        MatchStarted = true;
+    }
+    #endregion
+
+    #region Strike handlers
     public void SetStrikeFromID(ulong ID, int Strikes)
     {
-        Entry entry = GetEntry(ID);
-        UI.Internal_SetStrike(entry, Strikes);
+        PlayerEntry entry = GetEntry(ID);
+        entry.StrikeCount = Strikes;
+        UI.UpdateStrikes(entry);
     }
 
-    public void SetStrikeFromName(string Name, int Strikes)
+    private PlayerEntry GetEntry(ulong ID)
     {
-        Entry entry = GetEntry(Name);
-        UI.Internal_SetStrike(entry, Strikes);
-    }
-
-    private Entry GetEntry(ulong ID)
-    {
-        foreach (Entry entry in UI.AllPlayerEntries)
+        foreach (PlayerEntry entry in Server.RegisteredPlayers)
         {
             if (entry.ID == ID)
             {
@@ -104,33 +113,19 @@ public class TestServerStuff : NetworkBehaviour
         }
         return null;
     }
-
-    private Entry GetEntry(string Name)
-    {
-        foreach (Entry entry in UI.AllPlayerEntries)
-        {
-            if (entry.Name == Name)
-            {
-                return entry;
-            }
-        }
-        return null;
-    }
+    #endregion
 
     public void UpdateTime(TimeClass newTime)
     {
         StartTime.Value = newTime;
     }
-
-    [ClientRpc]
-    public void SendStartSignal_ClientRpc()
-    {
-        MatchStarted = true;
-    }
 }
 
 namespace StartTime
 {
+    /// <summary>
+    /// A network struct type to store time data, and convert to a <see cref="DateTime"/>
+    /// </summary>
     [Serializable]
     public struct TimeClass : INetworkSerializable
     {

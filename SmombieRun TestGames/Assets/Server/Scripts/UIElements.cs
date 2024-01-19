@@ -4,6 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using Enums.UI;
 using TMPro;
+using System;
+using ExcelReader_NS;
 
 public class UIElements : MonoBehaviour
 {
@@ -46,11 +48,10 @@ public class UIElements : MonoBehaviour
     private GameObject PlayerEntryTemplate;
     [SerializeField]
     private Transform PlayersContent;
+    public ServerMenuHandler ServerCallback;
 
     [Header("ExcelReader")]
     public TMP_InputField FilePathBox;
-
-    public List<Entry> AllPlayerEntries = new List<Entry>();
 
     private void Start()
     {
@@ -58,22 +59,41 @@ public class UIElements : MonoBehaviour
         NoStrike = _noStrike;
     }
 
-    public Entry AddToEntryList(ulong ID, string Name, string StartNumber)
+    #region Entries
+    public bool CreateEntry(string Name, string StartNumber, out PlayerEntry Entry)
     {
-        Entry NewEntry = Instantiate(PlayerEntryTemplate, PlayersContent).GetComponent<Entry>();
-        NewEntry.Name = Name;
-        NewEntry.StartNumber = StartNumber;
-        NewEntry.ID = ID;
-        NewEntry.SetText();
+        if (!FindEntry(StartNumber, out PlayerEntry Found))
+        {
+            // Entry does not exist, add new
+            Entry MenuEntry = Instantiate(PlayerEntryTemplate, PlayersContent).GetComponent<Entry>();
+            MenuEntry.gameObject.SetActive(false);
+            PlayerEntry New = new PlayerEntry(MenuEntry);
 
-        AllPlayerEntries.Add(NewEntry);
-        return NewEntry;
+            New.Name = Name;
+            New.StartNumber = StartNumber;
+            New.SetMenuText();
+
+            Entry = New;
+            return true;
+        }
+        else
+        {
+            Entry = Found;
+            return false;
+        }
     }
 
-    public void RemoveFromEntryList(ulong ID)
+    public void AssignEntry(PlayerEntry entry, ulong ID)
     {
-        Entry FoundEntry = null;
-        foreach (Entry entry in AllPlayerEntries)
+        entry.ID = ID;
+        entry.MenuEntry.IDText.color = Color.black;
+        entry.Joined = true;
+    }
+
+    public void SetToDisconnected(ulong ID)
+    {
+        PlayerEntry FoundEntry = null;
+        foreach (PlayerEntry entry in ServerCallback.RegisteredPlayers)
         {
             if (entry.ID == ID)
             {
@@ -88,10 +108,26 @@ public class UIElements : MonoBehaviour
             return;
         }
 
-        Destroy(FoundEntry.gameObject);
-        AllPlayerEntries.Remove(FoundEntry);
+        FoundEntry.MenuEntry.IDText.color = Color.red;
     }
 
+    public bool FindEntry(string StartNumber, out PlayerEntry Found)
+    {
+        foreach (PlayerEntry entry in ServerCallback.RegisteredPlayers)
+        {
+            if (entry.StartNumber == StartNumber)
+            {
+                Found = entry;
+                return true;
+            }
+        }
+
+        Found = null;
+        return false;
+    }
+    #endregion
+
+    #region Display code
     public void ToggleView(View view, bool SetActive)
     {
         switch (view)
@@ -172,9 +208,9 @@ public class UIElements : MonoBehaviour
         return true;
     }
 
-    public void Internal_SetStrike(Entry entry, int Strikes)
+    public void UpdateStrikes(PlayerEntry entry)
     {
-        entry.SetStrikes(Strikes);
+        entry.MenuEntry.SetStrikes(entry.StrikeCount);
     }
 
     public void ShowSATError()
@@ -190,4 +226,5 @@ public class UIElements : MonoBehaviour
     {
         HostAtFooter.text = Text;
     }
+    #endregion
 }
