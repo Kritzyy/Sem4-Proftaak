@@ -31,6 +31,11 @@ public class WhackABrainScript : Game
         Touch.Disable();
 
         RunningGame = StartCoroutine(ProcessGame());
+
+        foreach (WhackZombie zombie in ZombieArray)
+        {
+            zombie.GameOngoing = true;
+        }
     }
 
     protected override void OnGameExit()
@@ -40,6 +45,7 @@ public class WhackABrainScript : Game
             zombie.transform.localScale = Vector3.zero;
             zombie.CanBeHit = false;
             zombie.IsUp = false;
+            zombie.GameOngoing = false;
         }
         Touch.performed -= Touch_performed;
         Touch.Disable();
@@ -54,11 +60,31 @@ public class WhackABrainScript : Game
         Started = true;
 
         (float, float) TimePerZombie = (1, 2);
+
+        // Difficulty
+        switch (Match.Difficulty)
+        {
+            case Enums.Match.DifficultyLevel.EASY:
+                TimePerZombie.Item1 *= 2;
+                TimePerZombie.Item2 *= 2;
+                break;
+            case Enums.Match.DifficultyLevel.NORMAL:
+                break;
+            case Enums.Match.DifficultyLevel.HARD:
+                TimePerZombie.Item1 /= 1.5f;
+                TimePerZombie.Item2 /= 1.5f;
+                break;
+            default:
+                break;
+        }
+
         float TimeAfterLastZombie = 0;
         float NewSpawnTime = 0;
 
         while (true)
         {
+            SpawnZombie();
+
             TimeAfterLastZombie = 0;
             NewSpawnTime = Random.Range(TimePerZombie.Item1, TimePerZombie.Item2);
             while (TimeAfterLastZombie < NewSpawnTime)
@@ -66,7 +92,6 @@ public class WhackABrainScript : Game
                 TimeAfterLastZombie += Time.deltaTime;
                 yield return new WaitForEndOfFrame();
             }
-            SpawnZombie();
         }
     }
 
@@ -77,7 +102,23 @@ public class WhackABrainScript : Game
         {
             LocationSpawner = (Random.Range(0, RowLength), Random.Range(0, ColumnLength));
         }
-        ZombieGrid[LocationSpawner.Item1, LocationSpawner.Item2].MoveUp();
+        float Uptime;
+        switch (Match.Difficulty)
+        {
+            case Enums.Match.DifficultyLevel.EASY:
+                Uptime = 3;
+                break;
+            case Enums.Match.DifficultyLevel.NORMAL:
+                Uptime = 2;
+                break;
+            case Enums.Match.DifficultyLevel.HARD:
+                Uptime = 1;
+                break;
+            default:
+                Uptime = 2;
+                break;
+        }
+        ZombieGrid[LocationSpawner.Item1, LocationSpawner.Item2].SetUptime(Uptime).MoveUp();
     }
 
     private bool IsZombieUp(int Row, int Column)

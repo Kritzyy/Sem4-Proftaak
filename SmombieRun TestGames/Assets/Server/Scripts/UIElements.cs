@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using Enums.UI;
+using Enums.Server.UI;
 using TMPro;
 using System;
 using ExcelReader_NS;

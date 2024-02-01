@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
-using Enums.SpeedTypingEnums;
+using Enums.Match.SpeedTypingEnums;
 using UnityEngine.InputSystem;
 using System.Linq;
 

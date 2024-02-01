@@ -5,17 +5,27 @@ using UnityEngine.Events;
 public class WhackZombie : MonoBehaviour
 {
     [Header("Animation")]
-    public Animator Animator;
-    public float AnimationSpeed;
-    public float Uptime;
+    [SerializeField]
+    private Animator Animator;
+    [SerializeField]
+    private float AnimationSpeed;
+    [SerializeField]
+    private float Uptime;
 
     [Header("Events")]
     public UnityEvent OnMiss;
 
     public bool IsUp;
     public bool CanBeHit;
+    public bool GameOngoing;
 
     private Coroutine Up;
+
+    public WhackZombie SetUptime(float Time)
+    {
+        Uptime = Time;
+        return this;
+    }
 
     public void MoveUp()
     {
@@ -42,7 +52,10 @@ public class WhackZombie : MonoBehaviour
         yield return new WaitForSeconds(AnimationSpeed);
 
         // Strike if not hit
-        OnMiss.Invoke();
+        if (GameOngoing)
+        {
+            OnMiss.Invoke();
+        }
     }
 
     public void OnHit()

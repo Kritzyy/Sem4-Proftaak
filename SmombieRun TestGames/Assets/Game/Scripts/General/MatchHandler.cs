@@ -21,6 +21,7 @@ public class MatchHandler : NetworkBehaviour
     [Header("Game settings")]
     //public bool MatchStarted;
     public MatchType Match;
+    public DifficultyLevel Difficulty;
     private float timer;
     public float TimePerMicrogame;
     private int StartTimeInSeconds;
@@ -49,6 +50,7 @@ public class MatchHandler : NetworkBehaviour
 
     [Header("Animator")]
     public Animator Animator;
+    public Animator GameOverAnim;
     public float AnimationLength;
     private float AnimMultiplier;
 
@@ -60,6 +62,7 @@ public class MatchHandler : NetworkBehaviour
 
     // Misc
     private Coroutine Game;
+    private bool DemoMatchStarted;
 
     private void Start()
     {
@@ -73,10 +76,32 @@ public class MatchHandler : NetworkBehaviour
             }
         }
 
-        if (Match == MatchType.MATCH) StartCoroutine(WaitingRoom());
+        if (Match == MatchType.RELEASE_GAME) StartCoroutine(WaitingRoom());
     }
 
-    #region Demo scene
+    public void SetDifficulty(int Index)
+    {
+        switch (Index)
+        {
+            case 0:
+                {
+                    Difficulty = DifficultyLevel.EASY;
+                    break;
+                }
+            case 1:
+                {
+                    Difficulty = DifficultyLevel.NORMAL;
+                    break;
+                }
+            case 2:
+                {
+                    Difficulty = DifficultyLevel.HARD;
+                    break;
+                }
+        }
+    }
+
+    #region Playtest scene
     public void StartDemoGame(Game game)
     {
         // Start game
@@ -93,45 +118,55 @@ public class MatchHandler : NetworkBehaviour
 
     public void ExitDemo()
     {
-        SceneManager.LoadScene("MenuScene");
+        if (Match == MatchType.RELEASE_PLAYTEST)
+        {
+            SceneManager.LoadScene("MenuScene");
+        }
+        else if (Match == MatchType.DEMO_PLAYTEST)
+        {
+            SceneManager.LoadScene("DemoMenu");
+        }
     }
     #endregion
 
     #region Waiting room
     private IEnumerator WaitingRoom()
     {
-        // Countdown
-        while (true)
+        if (Match == MatchType.RELEASE_GAME)
         {
-            if (!TestServerStuff.StartTime.Value.TimeSet)
+            // Countdown
+            while (true)
             {
-                CountdownText.text = "Waiting for start time set...";
-                yield return new WaitForSeconds(TestServerStuff.RefreshTime);
-                continue;
+                if (!TestServerStuff.StartTime.Value.TimeSet)
+                {
+                    CountdownText.text = "Waiting for start time set...";
+                    yield return new WaitForSeconds(TestServerStuff.RefreshTime);
+                    continue;
+                }
+
+                DateTime Now = DateTime.Now;
+                TimeSpan TimeLeft = TestServerStuff.StartTime.Value.GetDateTime().Subtract(Now);
+                StartTimeInSeconds = (TimeLeft.Hours * 3600) + (TimeLeft.Minutes * 60) + TimeLeft.Seconds;
+                if (TestServerStuff.MatchStarted)
+                {
+                    break;
+                }
+                else if (StartTimeInSeconds > 0)
+                {
+                    CountdownText.text = TimeLeft.Hours.ToString("00") + ":" + TimeLeft.Minutes.ToString("00") + ":" + TimeLeft.Seconds.ToString("00");
+                }
+                else if (StartTimeInSeconds <= 0)
+                {
+                    // Timer reached
+                    CountdownText.text = "Waiting for game start...";
+                }
+                yield return new WaitForEndOfFrame();
             }
 
-            DateTime Now = DateTime.Now;
-            TimeSpan TimeLeft = TestServerStuff.StartTime.Value.GetDateTime().Subtract(Now);
-            StartTimeInSeconds = (TimeLeft.Hours * 3600) + (TimeLeft.Minutes * 60) + TimeLeft.Seconds;
-            if (TestServerStuff.MatchStarted)
-            {
-                break;
-            }
-            else if (StartTimeInSeconds > 0)
-            {
-                CountdownText.text = TimeLeft.Hours.ToString("00") + ":" + TimeLeft.Minutes.ToString("00") + ":" + TimeLeft.Seconds.ToString("00");
-            }
-            else if (StartTimeInSeconds <= 0)
-            {
-                // Timer reached
-                CountdownText.text = "Waiting for game start...";
-            }
-            yield return new WaitForEndOfFrame();
+            // Start!
+            Debug.Log("Game start!");
+            StartMatch();
         }
-
-        // Start!
-        Debug.Log("Game start!");
-        StartMatch();
     }
 
     public void StartMatch()
@@ -179,33 +214,38 @@ public class MatchHandler : NetworkBehaviour
     public void AddStrike()
     {
         StrikeCount++;
-        if (Match == MatchType.MATCH)
+        switch (Match)
         {
-            switch (StrikeCount)
-            {
-                case 1:
-                    {
-                        AllStrikes[0].sprite = Strike;
-                        break;
-                    }
-                case 2:
-                    {
-                        AllStrikes[1].sprite = Strike;
-                        break;
-                    }
-                case 3:
-                    {
-                        AllStrikes[2].sprite = Strike;
-                        GameOver();
-                        break;
-                    }
-            }
-            Network.UpdateStrikes_ServerRpc(StrikeCount);
-        }
-        else
-        {
-            DemoStrikeText.text = "x" + StrikeCount.ToString();
-            Debug.Log("Demo strike handed");
+            case MatchType.DEMO_GAME:
+            case MatchType.RELEASE_GAME:
+                switch (StrikeCount)
+                {
+                    case 1:
+                        {
+                            AllStrikes[0].sprite = Strike;
+                            break;
+                        }
+                    case 2:
+                        {
+                            AllStrikes[1].sprite = Strike;
+                            break;
+                        }
+                    case 3:
+                        {
+                            AllStrikes[2].sprite = Strike;
+                            GameOver();
+                            break;
+                        }
+                }
+                if (Match == MatchType.RELEASE_GAME)
+                {
+                    Network.UpdateStrikes_ServerRpc(StrikeCount);
+                }
+                break;
+            case MatchType.RELEASE_PLAYTEST:
+                DemoStrikeText.text = "x" + StrikeCount.ToString();
+                Debug.Log("Playtest strike handed");
+                break;
         }
     }
 
@@ -213,9 +253,9 @@ public class MatchHandler : NetworkBehaviour
     {
         StopCoroutine(Game);
         TimerText.text = "XX";
-        CurrentGame.ExitGame();
         GameInputs.DeactivateInput();
-        GameOverScreen.gameObject.SetActive(true);
+        Animator.Play("GameOver");
+        CurrentGame.ExitGame();
     }
     #endregion
 }

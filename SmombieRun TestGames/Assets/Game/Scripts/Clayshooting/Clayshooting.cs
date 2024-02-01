@@ -1,4 +1,4 @@
-using Enums.ClayshootingEnums;
+using Enums.Match.ClayshootingEnums;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -41,7 +41,23 @@ public class Clayshooting : Game
 
         StartCoroutine(DespawnReticle());
 
-        (float, float) MinMaxTimePerClay = (0.75f, 2.25f);
+        (float, float) MinMaxTimePerClay;
+        switch (Match.Difficulty)
+        {
+            case Enums.Match.DifficultyLevel.EASY:
+                MinMaxTimePerClay = (1.75f, 2.25f);
+                break;
+            case Enums.Match.DifficultyLevel.NORMAL:
+                MinMaxTimePerClay = (1.25f, 2f);
+                break;
+            case Enums.Match.DifficultyLevel.HARD:
+                MinMaxTimePerClay = (0.75f, 1.50f);
+                break;
+            default:
+                MinMaxTimePerClay = (0.75f, 2.25f);
+                break;
+        }
+
         float TimeAfterLastClay = 0;
         float NewSpawnTime = 0;
         while (true)

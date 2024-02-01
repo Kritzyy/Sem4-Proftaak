@@ -11,6 +11,11 @@ public abstract class Game : MonoBehaviour
     protected MatchHandler Match;
     [SerializeField]
     protected TextMeshProUGUI Header;
+    [SerializeField]
+    protected Image Backdrop;
+    [SerializeField]
+    protected Sprite BackgroundImage;
+
     public Coroutine RunningGame;
     protected List<GameObject> AllObjects = new List<GameObject>();
     public abstract bool Started { get; protected set; }
@@ -18,6 +23,13 @@ public abstract class Game : MonoBehaviour
     public void StartGame()
     {
         gameObject.SetActive(true);
+        switch (Match.Match)
+        {
+            case Enums.Match.MatchType.RELEASE_GAME:
+            case Enums.Match.MatchType.DEMO_GAME:
+                Backdrop.sprite = BackgroundImage;
+                break;
+        }
         OnGameStart();
     }
     public void ExitGame()
@@ -31,10 +43,12 @@ public abstract class Game : MonoBehaviour
 
         // Game specific Exits
         OnGameExit();
-        StopCoroutine(RunningGame);
+        Backdrop.gameObject.SetActive(true);
         gameObject.SetActive(false);
+        StopCoroutine(RunningGame);
         Started = false;
     }
+
     protected abstract void OnGameStart();
     protected abstract IEnumerator ProcessGame();
     protected abstract void OnGameExit();

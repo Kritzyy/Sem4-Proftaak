@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using StartTime;
 using System;
-using Enums.UI;
+using Enums.Server.UI;
 using ExcelReader_NS;
 
 public class TestServerStuff : NetworkBehaviour

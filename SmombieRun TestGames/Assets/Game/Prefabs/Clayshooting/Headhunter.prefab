@@ -403,6 +403,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Match: {fileID: 0}
   Header: {fileID: 4222330663030302768}
+  Background: {fileID: 4222330661862822458}
   Reticle: {fileID: 4222330662473721256}
   ClayModel: {fileID: 8082871603240972131, guid: ffc099e6e4f62d44e9ae38a917f4fed4, type: 3}
   BorderObject: {fileID: 4222330662386236187}

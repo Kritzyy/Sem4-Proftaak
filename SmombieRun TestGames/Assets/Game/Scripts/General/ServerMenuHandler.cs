@@ -6,11 +6,12 @@ using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 using System.Text;
-using Enums.UI;
+using Enums.Server.UI;
 using ExcelReader_NS;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 
 public class ServerMenuHandler : MenuHandler
 {
@@ -40,8 +41,13 @@ public class ServerMenuHandler : MenuHandler
         UI.SetStatusText("NO GAME");
         IP = GetLocalIPAddress();
         UI.SetHostFooter("To create a game, press the green button above here. Make sure you're connected to a wifi point.");
-
-        SceneManager.LoadScene("ObjectsScene", LoadSceneMode.Additive);
+        
+        // Get objects from Object Scene
+        if (FindAnyObjectByType(typeof(EventSystem)) == null)
+        {
+            Debug.Log("No Objects found yet, loading objects.");
+            SceneManager.LoadScene("ObjectsScene", LoadSceneMode.Additive);
+        }
     }
 
     #region Import Excel

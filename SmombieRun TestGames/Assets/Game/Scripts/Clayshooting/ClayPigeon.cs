@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using UnityEngine;
-using Enums.ClayshootingEnums;
+using Enums.Match.ClayshootingEnums;
 using UnityEngine.Events;
 
 public class ClayPigeon : MonoBehaviour

@@ -18,14 +18,14 @@ public class MenuHandler : MonoBehaviour
 {
     public Button ConnectButton, ErrorExitButton, DemoButton;
 
-    public string IP;
+    protected string IP;
     [SerializeField]
-    private TMP_InputField RoomCode, StartNumber;
+    protected TMP_InputField RoomCode, StartNumber;
     public UnityTransport transport;
 
     public ErrorMessage Error;
 
-    private ActionDelay ConnectAction;
+    protected ActionDelay ConnectAction;
 
     public GameObject EventSystem;
 
@@ -131,7 +131,7 @@ public class MenuHandler : MonoBehaviour
 
     public void SwitchToDemo()
     {
-        SceneManager.LoadScene("DemoScene");
+        SceneManager.LoadScene("PlaytestScene");
     }
 
     /// <summary>
